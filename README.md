@@ -1,6 +1,3 @@
-Here's a complete README.md for your HTTP server project:
-
-```markdown
 # Simple HTTP Server
 
 ## Overview
@@ -110,6 +107,3 @@ Ensure the following directory structure exists:
 
 ## Conclusion
 This Simple HTTP Server is a great starting point for learning about web servers and HTTP protocol fundamentals. You can further enhance it by adding more features such as handling other HTTP methods, serving static files, or implementing better error handling.
-```
-
-Feel free to customize any parts of the README to better fit your style or additional details you want to include!
