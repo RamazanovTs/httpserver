@@ -104,6 +104,3 @@ Ensure the following directory structure exists:
     ├── index.html    # Default landing page
     └── 404.html      # Custom 404 error page (optional)
 ```
-
-## Conclusion
-This Simple HTTP Server is a great starting point for learning about web servers and HTTP protocol fundamentals. You can further enhance it by adding more features such as handling other HTTP methods, serving static files, or implementing better error handling.
