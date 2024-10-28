@@ -10,5 +10,6 @@ app.template_dic={
     "contact":"contact.html",
 }
 app.error_page="404.html"
+app.static_dir="static"
 
 app.startServer()

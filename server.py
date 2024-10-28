@@ -3,7 +3,7 @@ import threading
 import os
 
 class Server:
-    def __init__(self, host='localhost', port=8080, tempdir='templates', tempdic=None,err_page=None):
+    def __init__(self, host='localhost', port=8080, tempdir='templates',static_dir=None, tempdic=None,err_page=None):
         if tempdic is None:
             tempdic = {"index": "index.html"}
         self.host = host
@@ -11,6 +11,7 @@ class Server:
         self.template_dir = tempdir 
         self.template_dic = tempdic
         self.error_page=err_page
+        self.static_dir=static_dir
 
 
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -56,19 +57,22 @@ class Server:
             if page in self.template_dic:
                 template_path = os.path.join(self.template_dir, self.template_dic[page])
                 return self.buildResponse(200, template_path)
+            elif page.endswith(".css"):
+                static_path = os.path.join(self.static_dir, page)
+                return self.buildResponse(200, static_path, "text/css")
             else:
-                return self.buildResponse(404)   
+                return self.buildResponse(404)
         else:
             return self.buildResponse(405)
-            
-    def buildResponse(self, status, template_path=None):
+
+    def buildResponse(self, status, template_path=None,content_type="text/html"):
         response = ""
         if status == 200:
             try:
                 with open(template_path, "r") as f:
                     content = f.read()
                 response += "HTTP/1.1 200 OK\r\n"
-                response += "Content-Type: text/html; charset=utf-8\r\n"
+                response += f"Content-Type: {content_type}; charset=utf-8\r\n"
                 response += "Content-Length: {}\r\n".format(len(content))
                 response += "Connection: close\r\n"
                 response += "\r\n"
