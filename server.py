@@ -3,77 +3,91 @@ import threading
 import os
 
 class Server:
-    def __init__(self, host='localhost', port=8080, template_dir='templates', static_dir=None, error_page='404.html'):
+    def __init__(self, host='localhost', port=8080, tempdir='templates',static_dir=None, tempdic=None,err_page=None):
+        if tempdic is None:
+            tempdic = {"index": "index.html"}
         self.host = host
         self.port = port
-        self.template_dir = template_dir
-        self.static_dir = static_dir
-        self.error_page = error_page
+        self.template_dir = tempdir 
+        self.template_dic = tempdic
+        self.error_page=err_page
+        self.static_dir=static_dir
+
+
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((host, port))
-    
-    def start_server(self):
+
+    def startServer(self):
         self.server_socket.listen(5)
-        print(f"Listening on {self.host}:{self.port}")
+        print(f"Listening to {self.host}:{self.port}")
         try:
             while True:
                 client_socket, addr = self.server_socket.accept()
-                print(f"Client {addr[0]}:{addr[1]} connected!")
-                threading.Thread(target=self.handle_client, args=(client_socket,)).start()
+                print(f"Client {addr[0]}:{addr[1]} joined!")
+                threading.Thread(target=self.handleClient, args=(client_socket, addr)).start()
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"Error occurred: {e}")
         finally:
             self.server_socket.close()
 
-    def handle_client(self, client_socket):
+    def handleClient(self, client_socket, addr):
         try:
             request = client_socket.recv(1024).decode('utf-8')
             if not request:
                 return
 
-            method, path, _ = request.split('\r\n')[0].split()
-            response = self.return_response(method, path)
+            request_line = request.split('\r\n')[0]
+            method, page, _ = request_line.split()
+
+            response = self.returnResponse(method, page)
             client_socket.sendall(response.encode('utf-8'))
         finally:
             client_socket.close()
 
-    def return_response(self, method, path):
-        if path == "/":
-            path = '/index.html'
-        
-        if method == 'GET':
-            if path.endswith(".html") or path == '/index.html':
-                return self.build_response(200, os.path.join(self.template_dir, path[1:]))
-            elif path.endswith(".css") and self.static_dir:
-                return self.build_response(200, os.path.join(self.static_dir, path[1:]), "text/css")
-            else:
-                return self.build_response(404)
+    def returnResponse(self, method, page):
+        if page == "/":
+            page = 'index'
         else:
-            return self.build_response(405)
+            page = page[1:]
 
-    def build_response(self, status, file_path=None, content_type="text/html"):
+        if page.endswith(".html"):
+            page = page[:-5]
+
+        if method == 'GET':
+            if page in self.template_dic:
+                template_path = os.path.join(self.template_dir, self.template_dic[page])
+                return self.buildResponse(200, template_path)
+            elif page.endswith(".css"):
+                static_path = os.path.join(self.static_dir, page)
+                return self.buildResponse(200, static_path, "text/css")
+            else:
+                return self.buildResponse(404)
+        else:
+            return self.buildResponse(405)
+
+    def buildResponse(self, status, template_path=None,content_type="text/html"):
+        response = ""
         if status == 200:
             try:
-                with open(file_path, "r") as f:
+                with open(template_path, "r") as f:
                     content = f.read()
-                response = "HTTP/1.1 200 OK\r\n"
+                response += "HTTP/1.1 200 OK\r\n"
                 response += f"Content-Type: {content_type}; charset=utf-8\r\n"
-                response += f"Content-Length: {len(content)}\r\n"
-                response += "Connection: close\r\n\r\n"
+                response += "Content-Length: {}\r\n".format(len(content))
+                response += "Connection: close\r\n"
+                response += "\r\n"
                 response += content
             except FileNotFoundError:
-                return self.build_response(404)
+                return self.buildResponse(404) 
         elif status == 404:
-            return self.build_error_response(self.error_page)
+            if self.error_page:
+                with open(self.template_dir+f"/{self.error_page}","r") as f:
+                    content = f.read()
+                response+="HTTP/1.1 404 Not Found\r\n\r\n"
+                response+=content
+            else:
+                response = "HTTP/1.1 404 Not Found\r\n\r\n<h1>404 Not Found</h1>"
         elif status == 405:
-            return "HTTP/1.1 405 Method Not Allowed\r\n\r\n<h1>405 Method Not Allowed</h1>"
-        
-        return response
+            response = "HTTP/1.1 405 Method Not Allowed\r\n\r\n<h1>405 Method Not Allowed</h1>"
 
-    def build_error_response(self, error_page):
-        try:
-            with open(os.path.join(self.template_dir, error_page), "r") as f:
-                content = f.read()
-            return "HTTP/1.1 404 Not Found\r\n\r\n" + content
-        except FileNotFoundError:
-            return "HTTP/1.1 404 Not Found\r\n\r\n<h1>404 Not Found</h1>"
+        return response
